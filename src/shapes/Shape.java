@@ -1,6 +1,5 @@
 package shapes;
 
-import java.awt.Rectangle;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -10,11 +9,16 @@ import shapes.Expression.BoundsAxis;
 
 public class Shape {
 
-	public Rectangle bounds;
+	public Vector origin;
+	public double size;
 	public Set<Expression> borders;
+	
+	//Border touching tolerance
+	public static int tolerance = 5;
 
-	public Shape(Rectangle bounds) {
-		this.bounds = bounds;
+	public Shape(Vector origin, double size) {
+		this.origin = origin;
+		this.size = size;
 		this.borders = new HashSet<Expression>();
 	}
 
@@ -22,24 +26,35 @@ public class Shape {
 		borders.add(new Expression(this, expression, bounds, boundsAxis));
 	}
 
-	public boolean isTouchingBorder(double x, double y) {
-		if (Render.console) System.out.println();
-		int tolerance = 5;
-
+	public int isTouchingBorder(Vector pos) {
+		int touchingCount = 0;
+		
 		for (Expression e : borders) {
-			double eY = e.evaluateForY(x, y);
+			double eY = e.evaluateAtPoint(pos.x, pos.y);
+			if (eY==Double.MAX_VALUE) continue; //Over bounds for expression
+			
+			//Evaluate with a tolerance, so overshooting does not affect result
+			if (pos.y>=eY-tolerance&&pos.y<=eY+tolerance) touchingCount++;
+		}
+
+		return touchingCount;
+	}
+	
+	public Expression touchingBorder(Vector pos) {
+		for (Expression e : borders) {
+			double eY = e.evaluateAtPoint(pos.x, pos.y);
 
 			if (Render.console) {
 				System.out.println(e.expression+"  "+e.bounds.toString());
 				if (eY==Double.MAX_VALUE) System.out.println("out of bounds");
-				else System.out.println("x: "+x+" y: "+y+" e: "+eY+" ");
+				else System.out.println("x: "+pos.x+" y: "+pos.y+" e: "+eY+" ");
 			}
 
 			if (eY==Double.MAX_VALUE) continue; //Over bounds for expression
 			//Evaluate with a scope, so overshooting does not affect result
-			if (y>=eY-tolerance&&y<=eY+tolerance) return true;
+			if (pos.y>=eY-tolerance&&pos.y<=eY+tolerance) return e;
 		}
-
-		return false;
+		
+		return null;
 	}
 }
